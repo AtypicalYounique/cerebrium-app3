@@ -741,8 +741,9 @@ function App() {
         </header>
         <div className="eyebrow">Cerebrium knowledge quiz · choose your mode</div>
         <h1>
-          Serverless GPU and real-time AI <span className="hl">trivia</span>
+          Cerebrium <span className="hl">Trivia Quiz</span>
         </h1>
+        <p className="subtitle">Serverless GPU and real-time AI</p>
         <p className="lede">
           Pick a mode. Each mode runs 12 questions at that difficulty tier. Topics span Cerebrium's founders, funding, pricing, GPU lineup, security posture, and the broader serverless GPU and AI infrastructure landscape. Length parity validated. Plausible wrong answers.
         </p>
