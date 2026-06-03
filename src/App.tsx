@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import "./styles.css";
 import { BRAND } from "./brand";
 
@@ -604,20 +604,36 @@ function shuffleQuestions(questions: Question[]): Question[] {
   });
 }
 
+type Level = "beginner" | "intermediate" | "expert";
+
+const LEVEL_LABEL: Record<Level, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  expert: "Expert",
+};
+
+const LEVEL_BLURB: Record<Level, string> = {
+  beginner:
+    "Foundational Cerebrium facts: founders, YC batch, headquarters, product positioning, and core serverless GPU concepts.",
+  intermediate:
+    "Funding round, investor lineup, GPU lineup, regions, pricing structure, security posture, and named customers.",
+  expert:
+    "Per-second pricing, cold-start benchmarks, compliance certifications, internal architecture, and AI infra deep cuts.",
+};
+
 function App() {
   const [stage, setStage] = useState<"setup" | "run" | "done">("setup");
+  const [level, setLevel] = useState<Level | null>(null);
   const [qs, setQs] = useState<Question[]>([]);
   const [idx, setIdx] = useState(0);
   const [picks, setPicks] = useState<Record<string, number>>({});
   const [revealed, setRevealed] = useState<Record<string, number>>({});
   const [toast, setToast] = useState(false);
 
-  useEffect(() => {
-    setQs(shuffleQuestions(BANK));
-  }, []);
-
-  const start = () => {
-    setQs(shuffleQuestions(BANK));
+  const startLevel = (lvl: Level) => {
+    const pool = BANK.filter((q) => q.level === lvl);
+    setLevel(lvl);
+    setQs(shuffleQuestions(pool));
     setIdx(0);
     setPicks({});
     setRevealed({});
@@ -668,19 +684,15 @@ function App() {
   const summary = useMemo(() => {
     const lines: string[] = [];
     lines.push("Cerebrium · Serverless GPU & Real-time AI Infrastructure Trivia");
+    if (level) lines.push(`Mode: ${LEVEL_LABEL[level]}`);
     lines.push(`Score: ${correctCount} / ${qs.length}`);
-    lines.push("");
-    lines.push("Breakdown by difficulty:");
-    lines.push(`  - Beginner: ${breakdown.beginner.correct}/${breakdown.beginner.total}`);
-    lines.push(`  - Intermediate: ${breakdown.intermediate.correct}/${breakdown.intermediate.total}`);
-    lines.push(`  - Expert: ${breakdown.expert.correct}/${breakdown.expert.total}`);
     lines.push("");
     lines.push("Topic breakdown:");
     Object.entries(topicBreakdown).forEach(([t, v]) => {
       lines.push(`  - ${TOPIC_LABEL[t] || t}: ${v.correct}/${v.total}`);
     });
     return lines.join("\n");
-  }, [correctCount, qs.length, breakdown, topicBreakdown]);
+  }, [correctCount, qs.length, topicBreakdown, level]);
 
   const onCopy = async () => {
     try {
@@ -701,11 +713,16 @@ function App() {
 
   const restart = () => {
     setStage("setup");
+    setLevel(null);
     setIdx(0);
     setPicks({});
     setRevealed({});
-    setQs(shuffleQuestions(BANK));
+    setQs([]);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const replaySameLevel = () => {
+    if (level) startLevel(level);
   };
 
   if (stage === "setup") {
@@ -722,27 +739,52 @@ function App() {
           />
           <span className="brand-chip">Independent quiz</span>
         </header>
-        <div className="eyebrow">Cerebrium knowledge quiz · 36 questions</div>
+        <div className="eyebrow">Cerebrium knowledge quiz · choose your mode</div>
         <h1>
           Serverless GPU and real-time AI <span className="hl">trivia</span>
         </h1>
         <p className="lede">
-          12 beginner, 12 intermediate, 12 expert questions covering Cerebrium's founders, funding, pricing, GPU lineup, security posture, and the broader serverless GPU and AI infrastructure landscape. Length parity validated. Plausible wrong answers.
+          Pick a mode. Each mode runs 12 questions at that difficulty tier. Topics span Cerebrium's founders, funding, pricing, GPU lineup, security posture, and the broader serverless GPU and AI infrastructure landscape. Length parity validated. Plausible wrong answers.
         </p>
 
         <div className="card">
-          <h2>What's inside</h2>
+          <h2>Beginner Mode</h2>
+          <p style={{ color: "#cdd3df", fontSize: 14, lineHeight: 1.6, marginBottom: 12 }}>
+            {LEVEL_BLURB.beginner}
+          </p>
+          <button className="btn" onClick={() => startLevel("beginner")}>
+            Start Beginner Mode · 12 questions
+          </button>
+        </div>
+
+        <div className="card">
+          <h2>Intermediate Mode</h2>
+          <p style={{ color: "#cdd3df", fontSize: 14, lineHeight: 1.6, marginBottom: 12 }}>
+            {LEVEL_BLURB.intermediate}
+          </p>
+          <button className="btn" onClick={() => startLevel("intermediate")}>
+            Start Intermediate Mode · 12 questions
+          </button>
+        </div>
+
+        <div className="card">
+          <h2>Expert Mode</h2>
+          <p style={{ color: "#cdd3df", fontSize: 14, lineHeight: 1.6, marginBottom: 12 }}>
+            {LEVEL_BLURB.expert}
+          </p>
+          <button className="btn" onClick={() => startLevel("expert")}>
+            Start Expert Mode · 12 questions
+          </button>
+        </div>
+
+        <div className="card">
+          <h2>How it works</h2>
           <ul className="ticks">
-            <li>36 questions total · 12 per difficulty tier</li>
+            <li>36 questions total in the bank · 12 per difficulty tier</li>
             <li>4 choices each · correct answer position randomized per session</li>
             <li>Distractors use real serverless GPU and AI infra competitor names so guessing is harder</li>
             <li>No accounts, no tracking, runs locally in your browser</li>
           </ul>
-          <div style={{ marginTop: 14 }}>
-            <button className="btn" onClick={start}>
-              Start the 36 question quiz
-            </button>
-          </div>
         </div>
 
         <div className="footer-note">
@@ -775,7 +817,7 @@ function App() {
           <div style={{ width: `${(idx / qs.length) * 100}%` }} />
         </div>
         <div className="eyebrow">
-          Question {idx + 1} of {qs.length} · {TOPIC_LABEL[q.topic] || q.topic} · {q.level}
+          {level ? LEVEL_LABEL[level] : ""} Mode · Question {idx + 1} of {qs.length} · {TOPIC_LABEL[q.topic] || q.topic}
         </div>
         <div className="card qcard">
           <h2 style={{ fontSize: 18, lineHeight: 1.4, marginBottom: 14 }}>{q.q}</h2>
@@ -845,23 +887,11 @@ function App() {
       <p className="lede">{headline}</p>
 
       <div className="card">
-        <h2>Breakdown by difficulty</h2>
+        <h2>Mode</h2>
         <div className="topic-row">
-          <span style={{ color: "#cdd3df" }}>Beginner</span>
+          <span style={{ color: "#cdd3df" }}>{level ? LEVEL_LABEL[level] : ""} Mode</span>
           <span className="num">
-            {breakdown.beginner.correct}/{breakdown.beginner.total}
-          </span>
-        </div>
-        <div className="topic-row">
-          <span style={{ color: "#cdd3df" }}>Intermediate</span>
-          <span className="num">
-            {breakdown.intermediate.correct}/{breakdown.intermediate.total}
-          </span>
-        </div>
-        <div className="topic-row">
-          <span style={{ color: "#cdd3df" }}>Expert</span>
-          <span className="num">
-            {breakdown.expert.correct}/{breakdown.expert.total}
+            {correctCount}/{qs.length}
           </span>
         </div>
       </div>
@@ -906,8 +936,11 @@ function App() {
           <button className="btn" onClick={onCopy}>
             Copy results
           </button>
+          <button className="btn secondary" onClick={replaySameLevel}>
+            Replay {level ? LEVEL_LABEL[level] : ""} Mode
+          </button>
           <button className="btn secondary" onClick={restart}>
-            Take the quiz again
+            Try a different mode
           </button>
         </div>
       </div>
